@@ -1,0 +1,11 @@
+.process-block{
+    height: 2rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    color: #000;
+    border: 1px solid #393939b4;
+}
+
+.process-name{
+    font-size: 0.8rem;
+}
