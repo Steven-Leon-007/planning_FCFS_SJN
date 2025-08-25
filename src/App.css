@@ -23,7 +23,7 @@ body,
     grid-template-columns: repeat(2, 1fr);
 }
 
-.simulation-container::after{
+.simulation-container::after {
     content: "";
     position: absolute;
     height: 100%;
@@ -33,7 +33,7 @@ body,
     transform: translateX(-50%);
 }
 
-.init-simulation{
+.init-simulation {
     position: fixed;
     background-color: var(--color-decoration);
     border: none;
@@ -47,6 +47,14 @@ body,
     transition: background-color 0.3s ease-in-out;
 }
 
-.init-simulation.stop{
+.init-simulation:hover {
+    background-color: var(--color-decoration-hover);
+}
+
+.init-simulation.stop {
     background-color: var(--color-error);
+}
+
+.init-simulation.stop:hover {
+    background-color: var(--color-error-hover);
 }

@@ -8,6 +8,7 @@ const ProcessComponent = ({ process, index }) => {
     <motion.div
       className="process-block"
       style={{ backgroundColor: process.color, width: `${process.size}px` }}
+      layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{

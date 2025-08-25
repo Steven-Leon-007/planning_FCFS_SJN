@@ -2,13 +2,15 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative;
 }
 
-.engine-container{
+.engine-container {
     display: flex;
     align-self: flex-start;
     position: relative;
     width: 100%;
+    height: 70vh;
 }
 
 .process-list {
@@ -35,16 +37,42 @@
     justify-self: end;
 }
 
-.engine-container svg{
+.engine-container svg {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
 }
 
-.engine-container.list-FCFS svg{
+.engine-container.list-FCFS svg {
     right: 4rem;
 }
 
-.engine-container.engine-container.list-SJN svg{
+.engine-container.engine-container.list-SJN svg {
     left: 4rem;
+}
+
+.cpu-area {
+    display: flex;
+    flex-direction: column;
+}
+
+.cpu-area.FCFS {
+    margin-left: 2rem;
+}
+
+.cpu-area.SJN {
+    margin-right: 2rem;
+}
+
+.stats {
+    position: absolute;
+    top: 70%;
+}
+
+.stats.FCFS{
+    right: 5rem;
+}
+
+.stats.SJN{
+    left: 5rem;
 }
