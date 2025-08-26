@@ -1,7 +1,6 @@
 import "./SchedulerComponent.css";
 import ProcessComponent from '../process/ProcessComponent';
 import { useEffect, useState, useRef } from "react";
-import { sortBySJN } from "../../utils/SortSJN";
 import { AnimatePresence, motion } from "motion/react";
 import EngineIconComponent from "../engine-icon/EngineIconComponent";
 import { ProcessModel } from "../../model/ProcessModel";
@@ -9,7 +8,7 @@ import { ProcessModel } from "../../model/ProcessModel";
 const TICK_MS = 1000;
 const SPAWN_MS = 7000;
 
-const SchedulerComponent = ({ mode, processes, isSimulating }) => {
+const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive }) => {
     // estados para UI
     const [queue, setQueue] = useState([]);         // procesos esperando
     const [running, setRunning] = useState(null);   // proceso en CPU
@@ -56,7 +55,7 @@ const SchedulerComponent = ({ mode, processes, isSimulating }) => {
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSimulating]);
+    }, [isSimulating, isPreemptive]);
 
     // efecto para spawn de procesos (cada 5s)
     useEffect(() => {
@@ -75,6 +74,11 @@ const SchedulerComponent = ({ mode, processes, isSimulating }) => {
                 // añadir a la cola (refs y estado)
                 queueRef.current.push(newProc);
                 setQueue([...queueRef.current]);
+
+                // Si es SJN expropiativo, verificar si debemos interrumpir el proceso actual
+                if (mode === "SJN" && isPreemptive && runningRef.current) {
+                    checkForPreemption();
+                }
             }, SPAWN_MS);
         }
 
@@ -84,9 +88,36 @@ const SchedulerComponent = ({ mode, processes, isSimulating }) => {
                 spawnIntervalRef.current = null;
             }
         };
-    }, [isSimulating]);
+    }, [isSimulating, mode, isPreemptive]);
+
+    // Función para verificar si hay un proceso más corto en la cola
+    const checkForPreemption = () => {
+        if (queueRef.current.length === 0 || !runningRef.current) return;
+
+        // Encontrar el proceso con el menor tiempo restante en la cola
+        const shortestInQueue = queueRef.current.reduce((shortest, p) => {
+            return p.remaining < shortest.remaining ? p : shortest;
+        }, queueRef.current[0]);
+
+        // Si hay un proceso más corto que el actual, expropiar
+        if (shortestInQueue.remaining < runningRef.current.remaining) {
+            // Devolver el proceso actual a la cola
+            queueRef.current.push(runningRef.current);
+            runningRef.current = null;
+            setRunning(null);
+
+            // Ordenar la cola por tiempo restante (SJN)
+            queueRef.current.sort((a, b) => a.remaining - b.remaining);
+            setQueue([...queueRef.current]);
+        }
+    };
 
     function stepTick() {
+        // Si es SJN expropiativo, verificar si debemos interrumpir el proceso actual
+        if (mode === "SJN" && isPreemptive && runningRef.current) {
+            checkForPreemption();
+        }
+
         if (!runningRef.current) {
             if (queueRef.current.length === 0) {
                 setRunning(null);
@@ -128,7 +159,7 @@ const SchedulerComponent = ({ mode, processes, isSimulating }) => {
 
     return (
         <div className={`main-container ${mode}`}>
-            <h2>Algoritmo {mode}</h2>
+            <h2>Algoritmo {mode} {isPreemptive && mode === "SJN" ? "(Expropiativo)" : ""}</h2>
 
             <div className={`engine-container list-${mode}`}>
                 <div className="process-list">

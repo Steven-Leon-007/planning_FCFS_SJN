@@ -58,3 +58,9 @@ body,
 .init-simulation.stop:hover {
     background-color: var(--color-error-hover);
 }
+
+.preemptive-marker{
+    position: absolute;
+    right: 1rem;
+    top: 1.5rem;
+}

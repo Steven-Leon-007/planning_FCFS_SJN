@@ -7,6 +7,7 @@ function App() {
   const [processes, setProcesses] = useState([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [displayButton, setDisplayButton] = useState(false);
+  const [isPreemptive, setIsPreemptive] = useState(false);
 
   useEffect(() => {
     const initialProcesses = Array.from({ length: 10 }, () => ProcessModel.createRandomProcess());
@@ -28,8 +29,17 @@ function App() {
     <>
       <div className='header'>Planning simulator - By Nata, Steven and Mileth</div>
       <div className="simulation-container">
-        <SchedulerComponent mode="FCFS" processes={processes} isSimulating={isSimulating}/>
-        <SchedulerComponent mode="SJN" processes={processes} isSimulating={isSimulating}/>
+        <SchedulerComponent mode="FCFS" processes={processes} isSimulating={isSimulating} isPreemptive={false} />
+        <SchedulerComponent mode="SJN" processes={processes} isSimulating={isSimulating} isPreemptive={isPreemptive} />
+
+        <label className='preemptive-marker'>
+          <input
+            type="checkbox"
+            checked={isPreemptive}
+            onChange={() => setIsPreemptive(!isPreemptive)}
+          />
+          Modo expropiativo
+        </label>
         <div>
           {displayButton && (
             !isSimulating ? (
