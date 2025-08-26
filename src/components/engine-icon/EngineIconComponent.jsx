@@ -2,6 +2,36 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useAnimation } from 'motion/react'
 
 const EngineIconComponent = ({ isRunning }) => {
+    const controls = useAnimation();
+
+    useEffect(() => {
+        if (isRunning) {
+            // Iniciar rotación continua
+            controls.start({
+                rotate: 360,
+                transition: {
+                    rotate: {
+                        duration: 2,
+                        ease: "linear",
+                        repeat: Infinity,
+                        repeatType: "loop"
+                    }
+                }
+            });
+        } else {
+            controls.start({
+                rotate: [null, 360],
+                transition: {
+                    rotate: {
+                        duration: 1,
+                        ease: "easeOut"
+                    }
+                }
+            }).then(() => {
+                controls.set({ rotate: 0 });
+            });
+        }
+    }, [isRunning, controls]);
 
     return (
         <svg
@@ -28,6 +58,7 @@ const EngineIconComponent = ({ isRunning }) => {
                     transformOrigin: "center",
                     transformBox: "fill-box"
                 }}
+                animate={controls}
             />
             <path
                 fill="#ffffff"

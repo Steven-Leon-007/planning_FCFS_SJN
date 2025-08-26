@@ -7,6 +7,7 @@ import EngineIconComponent from "../engine-icon/EngineIconComponent";
 import { ProcessModel } from "../../model/ProcessModel";
 
 const TICK_MS = 1000;
+const SPAWN_MS = 7000;
 
 const SchedulerComponent = ({ mode, processes, isSimulating }) => {
     // estados para UI
@@ -17,13 +18,16 @@ const SchedulerComponent = ({ mode, processes, isSimulating }) => {
     // refs mutables para usar en el interval y evitar closures stale
     const queueRef = useRef([]);
     const runningRef = useRef(null);
-    const intervalRef = useRef(null);
+    const tickIntervalRef = useRef(null);
+    const spawnIntervalRef = useRef(null);
 
     useEffect(() => {
+        // 1) clonamos para trabajar con copias independientes
         const clones = processes.map(
             (p) => new ProcessModel(p.id, p.name, p.burst, p.arrival, p.size, p.color)
         );
 
+        // 2) inicializamos con el orden original para que se vea la lista tal cual
         queueRef.current = clones;
         setQueue([...clones]);
         setRunning(null);
@@ -32,29 +36,55 @@ const SchedulerComponent = ({ mode, processes, isSimulating }) => {
 
     }, [processes, mode]);
 
-
-    // --- Simulación: arrancar/pausar según isSimulating ---
+    // efecto para el tick del scheduler (1s)
     useEffect(() => {
-        // limpia interval previo
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
+        if (tickIntervalRef.current) {
+            clearInterval(tickIntervalRef.current);
+            tickIntervalRef.current = null;
         }
 
         if (isSimulating) {
-            intervalRef.current = setInterval(() => {
+            tickIntervalRef.current = setInterval(() => {
                 stepTick();
             }, TICK_MS);
         }
 
         return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
+            if (tickIntervalRef.current) {
+                clearInterval(tickIntervalRef.current);
+                tickIntervalRef.current = null;
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSimulating]); // solo re-evalua cuando cambia isSimulating
+    }, [isSimulating]);
+
+    // efecto para spawn de procesos (cada 5s)
+    useEffect(() => {
+        if (spawnIntervalRef.current) {
+            clearInterval(spawnIntervalRef.current);
+            spawnIntervalRef.current = null;
+        }
+
+        if (isSimulating) {
+            spawnIntervalRef.current = setInterval(() => {
+                const newProc = ProcessModel.createRandomProcess();
+
+                // opcional: fijar arrival en ahora (si createRandomProcess no lo hace)
+                newProc.arrival = newProc.arrival ?? Date.now();
+
+                // añadir a la cola (refs y estado)
+                queueRef.current.push(newProc);
+                setQueue([...queueRef.current]);
+            }, SPAWN_MS);
+        }
+
+        return () => {
+            if (spawnIntervalRef.current) {
+                clearInterval(spawnIntervalRef.current);
+                spawnIntervalRef.current = null;
+            }
+        };
+    }, [isSimulating]);
 
     function stepTick() {
         if (!runningRef.current) {
@@ -63,7 +93,6 @@ const SchedulerComponent = ({ mode, processes, isSimulating }) => {
                 return;
             }
 
-            // seleccionar según algoritmo
             let idx = 0;
             if (mode === "SJN") {
                 // SJN -> escoger índice con menor remaining
@@ -120,7 +149,7 @@ const SchedulerComponent = ({ mode, processes, isSimulating }) => {
                 </div>
 
                 <div className={`cpu-area ${mode}`}>
-                    <EngineIconComponent isRunning={running} />
+                    <EngineIconComponent isRunning={isSimulating} />
                     <div className="cpu-slot">
                         {running ? (
                             <div className="running-wrapper">
