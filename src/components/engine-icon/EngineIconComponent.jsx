@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useAnimation } from 'motion/react'
 
-const EngineIconComponent = ({ isRunning }) => {
+const EngineIconComponent = ({ isRunning, tickTime }) => {
     const controls = useAnimation();
-
+    
     useEffect(() => {
         if (isRunning) {
+            const animationDuration = 2 * (tickTime / 1000);
+
             // Iniciar rotación continua
             controls.start({
                 rotate: 360,
                 transition: {
                     rotate: {
-                        duration: 2,
+                        duration: animationDuration,
                         ease: "linear",
                         repeat: Infinity,
                         repeatType: "loop"
@@ -19,11 +21,13 @@ const EngineIconComponent = ({ isRunning }) => {
                 }
             });
         } else {
+            const finalAnimationDuration = 1 * (tickTime / 1000);
+
             controls.start({
                 rotate: [null, 360],
                 transition: {
                     rotate: {
-                        duration: 1,
+                        duration: finalAnimationDuration,
                         ease: "easeOut"
                     }
                 }
@@ -31,7 +35,7 @@ const EngineIconComponent = ({ isRunning }) => {
                 controls.set({ rotate: 0 });
             });
         }
-    }, [isRunning, controls]);
+    }, [isRunning, controls, tickTime]);
 
     return (
         <svg

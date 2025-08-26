@@ -8,7 +8,7 @@ import { ProcessModel } from "../../model/ProcessModel";
 const TICK_MS = 1000;
 const SPAWN_MS = 7000;
 
-const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive }) => {
+const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive, tickTime, spawnTime }) => {
     // estados para UI
     const [queue, setQueue] = useState([]);         // procesos esperando
     const [running, setRunning] = useState(null);   // proceso en CPU
@@ -35,7 +35,7 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive }) => 
 
     }, [processes, mode]);
 
-    // efecto para el tick del scheduler (1s)
+    // efecto para el tick del scheduler
     useEffect(() => {
         if (tickIntervalRef.current) {
             clearInterval(tickIntervalRef.current);
@@ -45,7 +45,7 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive }) => 
         if (isSimulating) {
             tickIntervalRef.current = setInterval(() => {
                 stepTick();
-            }, TICK_MS);
+            }, tickTime);
         }
 
         return () => {
@@ -54,10 +54,9 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive }) => 
                 tickIntervalRef.current = null;
             }
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSimulating, isPreemptive]);
+    }, [isSimulating, isPreemptive, tickTime]);
 
-    // efecto para spawn de procesos (cada 5s)
+    // efecto para spawn de procesos
     useEffect(() => {
         if (spawnIntervalRef.current) {
             clearInterval(spawnIntervalRef.current);
@@ -67,19 +66,15 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive }) => 
         if (isSimulating) {
             spawnIntervalRef.current = setInterval(() => {
                 const newProc = ProcessModel.createRandomProcess();
-
-                // opcional: fijar arrival en ahora (si createRandomProcess no lo hace)
                 newProc.arrival = newProc.arrival ?? Date.now();
 
-                // añadir a la cola (refs y estado)
                 queueRef.current.push(newProc);
                 setQueue([...queueRef.current]);
 
-                // Si es SJN expropiativo, verificar si debemos interrumpir el proceso actual
                 if (mode === "SJN" && isPreemptive && runningRef.current) {
                     checkForPreemption();
                 }
-            }, SPAWN_MS);
+            }, spawnTime); // Usamos spawnTime en lugar de SPAWN_MS
         }
 
         return () => {
@@ -88,7 +83,7 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive }) => 
                 spawnIntervalRef.current = null;
             }
         };
-    }, [isSimulating, mode, isPreemptive]);
+    }, [isSimulating, mode, isPreemptive, spawnTime]);
 
     // Función para verificar si hay un proceso más corto en la cola
     const checkForPreemption = () => {
@@ -180,7 +175,7 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive }) => 
                 </div>
 
                 <div className={`cpu-area ${mode}`}>
-                    <EngineIconComponent isRunning={isSimulating} />
+                    <EngineIconComponent isRunning={isSimulating} tickTime={tickTime}/>
                     <div className="cpu-slot">
                         {running ? (
                             <div className="running-wrapper">
