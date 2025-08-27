@@ -5,11 +5,12 @@ import { AnimatePresence, motion } from "motion/react";
 import EngineIconComponent from "../engine-icon/EngineIconComponent";
 import { ProcessModel } from "../../model/ProcessModel";
 
-const SchedulerComponent = ({ mode, initialProcesses, newProcesses, isSimulating, isPreemptive, tickTime, onProcessAdded }) => {
+const SchedulerComponent = ({ mode, initialProcesses, newProcesses, isSimulating, isPreemptive, tickTime, onProcessAdded, showModal }) => {
     // estados para UI
     const [queue, setQueue] = useState([]);         // procesos esperando
     const [running, setRunning] = useState(null);   // proceso en CPU
     const [finished, setFinished] = useState([]);   // procesos completados
+
 
     // refs mutables para usar en el interval y evitar closures stale
     const queueRef = useRef([]);
@@ -211,7 +212,7 @@ const SchedulerComponent = ({ mode, initialProcesses, newProcesses, isSimulating
                 <div>Terminados: {finished.length}</div>
             </div>
 
-            {finished.length > 0 && (
+            {finished.length > 0 && showModal && (
                 <div className="finished-processes">
                     <h3>Procesos Terminados</h3>
 
@@ -262,7 +263,7 @@ const SchedulerComponent = ({ mode, initialProcesses, newProcesses, isSimulating
                         <h4>Métricas Promedio</h4>
                         <div className="summary-stats">
                             <div className="stat">
-                                <span className="stat-label">T. Respuesta Promedio:</span>
+                                <span className="stat-label">Tiempo Respuesta Promedio: </span>
                                 <span className="stat-value">
                                     {(
                                         finished.reduce(
@@ -273,7 +274,7 @@ const SchedulerComponent = ({ mode, initialProcesses, newProcesses, isSimulating
                                 </span>
                             </div>
                             <div className="stat">
-                                <span className="stat-label">T. Espera Promedio:</span>
+                                <span className="stat-label">Tiempo Espera Promedio: </span>
                                 <span className="stat-value">
                                     {(
                                         finished.reduce(
@@ -284,7 +285,7 @@ const SchedulerComponent = ({ mode, initialProcesses, newProcesses, isSimulating
                                 </span>
                             </div>
                             <div className="stat">
-                                <span className="stat-label">T. Retorno Promedio:</span>
+                                <span className="stat-label">Tiempo Retorno Promedio: </span>
                                 <span className="stat-value">
                                     {(
                                         finished.reduce(

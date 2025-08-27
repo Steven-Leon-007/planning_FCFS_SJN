@@ -12,6 +12,8 @@ function App() {
   const [spawnTime, setSpawnTime] = useState(7000);
   const spawnIntervalRef = useRef(null);
   const [newProcesses, setNewProcesses] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+
 
 
   useEffect(() => {
@@ -70,6 +72,7 @@ function App() {
   return (
     <>
       <div className='header'>Planning simulator - By Nata, Steven and Mileth</div>
+        <button onClick={() => setShowModal(prev => !prev)} className="button-report">{showModal ? "Ocultar Procesos Terminados" : "Ver Procesos Terminados"}</button>
       <div className="simulation-container">
         <SchedulerComponent
           mode="FCFS"
@@ -79,6 +82,7 @@ function App() {
           isPreemptive={false}
           tickTime={getTickTime()}
           onProcessAdded={() => setNewProcesses(prev => prev.slice(1))}
+          showModal={showModal}
         />
         <SchedulerComponent
           mode="SJN"
@@ -88,6 +92,7 @@ function App() {
           isPreemptive={isPreemptive}
           tickTime={getTickTime()}
           onProcessAdded={() => setNewProcesses(prev => prev.slice(1))}
+          showModal={showModal}
         />
         <label className='preemptive-marker'>
           <input

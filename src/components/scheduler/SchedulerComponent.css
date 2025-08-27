@@ -65,8 +65,8 @@
 }
 
 .stats {
-    position: absolute;
-    top: 70%;
+    position: static;
+    margin-bottom: 5rem;
 }
 
 .stats.FCFS{
@@ -81,16 +81,29 @@
     width: 100%;
 }
 
+.button-report{
+    position: absolute;
+    background-color: var(--color-accent);
+    border: none;
+    padding: 0.5rem;
+    width: 20rem;
+    border-radius: 8px;
+    right: 0;
+    top: 0.5rem;
+    cursor: pointer;
+    z-index: 9999;
+}
+
 .finished-processes h3{
     text-align: center;
 }
 
 .processes-list{
-    width: 100%;
+    width: 98%;
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    margin: 1rem 0;
+    margin: 1rem auto;
 }
 
 .process-card{
@@ -102,4 +115,12 @@
 
 .process-row{
     text-align: center;
+}
+
+.metrics-summary{
+    display: flex;
+    width: 98%;
+    margin: 0 auto;
+    background-color: #2448ab;
+    justify-content: space-around;
 }
