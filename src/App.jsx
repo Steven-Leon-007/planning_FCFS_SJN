@@ -1,23 +1,51 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import SchedulerComponent from './components/scheduler/SchedulerComponent'
 import { ProcessModel } from './model/ProcessModel';
 import "./App.css";
 
 function App() {
-  const [processes, setProcesses] = useState([]);
+  const [initialProcesses, setInitialProcesses] = useState([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [displayButton, setDisplayButton] = useState(false);
   const [isPreemptive, setIsPreemptive] = useState(false);
   const [simulationSpeed, setSimulationSpeed] = useState(1);
+  const [spawnTime, setSpawnTime] = useState(7000);
+  const spawnIntervalRef = useRef(null);
+  const [newProcesses, setNewProcesses] = useState([]);
 
 
   useEffect(() => {
-    const initialProcesses = Array.from({ length: 10 }, () => ProcessModel.createRandomProcess());
-    setProcesses(initialProcesses);
+    const initial = Array.from({ length: 10 }, () => ProcessModel.createRandomProcess());
+    setInitialProcesses(initial);
     setTimeout(() => {
       setDisplayButton(true);
     }, 4000);
   }, []);
+
+  // Efecto para generar nuevos procesos
+  useEffect(() => {
+    if (spawnIntervalRef.current) {
+      clearInterval(spawnIntervalRef.current);
+      spawnIntervalRef.current = null;
+    }
+
+    if (isSimulating) {
+      spawnIntervalRef.current = setInterval(() => {
+        const newProc = ProcessModel.createRandomProcess();
+        newProc.arrival = newProc.arrival ?? Date.now();
+
+        // Solo añadimos nuevos procesos a una lista separada
+        setNewProcesses(prev => [...prev, newProc]);
+      }, spawnTime / simulationSpeed);
+    }
+
+    return () => {
+      if (spawnIntervalRef.current) {
+        clearInterval(spawnIntervalRef.current);
+        spawnIntervalRef.current = null;
+      }
+    };
+  }, [isSimulating, simulationSpeed, spawnTime]);
 
   const startSimulation = () => {
     setIsSimulating(true);
@@ -45,21 +73,22 @@ function App() {
       <div className="simulation-container">
         <SchedulerComponent
           mode="FCFS"
-          processes={processes}
+          initialProcesses={initialProcesses}
+          newProcesses={newProcesses}
           isSimulating={isSimulating}
           isPreemptive={false}
           tickTime={getTickTime()}
-          spawnTime={getSpawnTime()}
+          onProcessAdded={() => setNewProcesses(prev => prev.slice(1))}
         />
         <SchedulerComponent
           mode="SJN"
-          processes={processes}
+          initialProcesses={initialProcesses}
+          newProcesses={newProcesses}
           isSimulating={isSimulating}
           isPreemptive={isPreemptive}
           tickTime={getTickTime()}
-          spawnTime={getSpawnTime()}
+          onProcessAdded={() => setNewProcesses(prev => prev.slice(1))}
         />
-
         <label className='preemptive-marker'>
           <input
             type="checkbox"
@@ -82,7 +111,7 @@ function App() {
             )
           )}
         </div>
-        
+
         <div className="speed-control">
           <label>Velocidad de simulación:</label>
           <div className="speed-slider-container">

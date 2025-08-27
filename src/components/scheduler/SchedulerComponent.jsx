@@ -5,10 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import EngineIconComponent from "../engine-icon/EngineIconComponent";
 import { ProcessModel } from "../../model/ProcessModel";
 
-const TICK_MS = 1000;
-const SPAWN_MS = 7000;
-
-const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive, tickTime, spawnTime }) => {
+const SchedulerComponent = ({ mode, initialProcesses, newProcesses, isSimulating, isPreemptive, tickTime, onProcessAdded }) => {
     // estados para UI
     const [queue, setQueue] = useState([]);         // procesos esperando
     const [running, setRunning] = useState(null);   // proceso en CPU
@@ -18,22 +15,43 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive, tickT
     const queueRef = useRef([]);
     const runningRef = useRef(null);
     const tickIntervalRef = useRef(null);
-    const spawnIntervalRef = useRef(null);
 
     useEffect(() => {
-        // 1) clonamos para trabajar con copias independientes
-        const clones = processes.map(
+        // Clonar procesos iniciales para trabajar con copias independientes
+        const clones = initialProcesses.map(
             (p) => new ProcessModel(p.id, p.name, p.burst, p.arrival, p.size, p.color)
         );
 
-        // 2) inicializamos con el orden original para que se vea la lista tal cual
+        // Inicializar la cola con los procesos iniciales
         queueRef.current = clones;
         setQueue([...clones]);
-        setRunning(null);
-        runningRef.current = null;
-        setFinished([]);
+    }, [initialProcesses, mode]); // Solo se ejecuta con procesos iniciales
 
-    }, [processes, mode]);
+    // Efecto para añadir nuevos procesos a la cola
+    useEffect(() => {
+        if (newProcesses.length > 0) {
+            // Tomar el primer proceso nuevo
+            const newProc = newProcesses[0];
+
+            // Clonar el proceso para evitar referencias compartidas
+            const clonedProc = new ProcessModel(
+                newProc.id, newProc.name, newProc.burst,
+                newProc.arrival, newProc.size, newProc.color
+            );
+
+            // Añadir a la cola
+            queueRef.current.push(clonedProc);
+            setQueue([...queueRef.current]);
+
+            // Notificar al padre que hemos procesado este proceso
+            onProcessAdded();
+
+            // Verificar expropiación si es SJN y modo expropiativo
+            if (mode === "SJN" && isPreemptive && runningRef.current) {
+                checkForPreemption();
+            }
+        }
+    }, [newProcesses, mode, isPreemptive, onProcessAdded]);
 
     // efecto para el tick del scheduler
     useEffect(() => {
@@ -56,34 +74,12 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive, tickT
         };
     }, [isSimulating, isPreemptive, tickTime]);
 
-    // efecto para spawn de procesos
+
     useEffect(() => {
-        if (spawnIntervalRef.current) {
-            clearInterval(spawnIntervalRef.current);
-            spawnIntervalRef.current = null;
+        if (mode === "SJN" && isPreemptive && runningRef.current) {
+            checkForPreemption();
         }
-
-        if (isSimulating) {
-            spawnIntervalRef.current = setInterval(() => {
-                const newProc = ProcessModel.createRandomProcess();
-                newProc.arrival = newProc.arrival ?? Date.now();
-
-                queueRef.current.push(newProc);
-                setQueue([...queueRef.current]);
-
-                if (mode === "SJN" && isPreemptive && runningRef.current) {
-                    checkForPreemption();
-                }
-            }, spawnTime); // Usamos spawnTime en lugar de SPAWN_MS
-        }
-
-        return () => {
-            if (spawnIntervalRef.current) {
-                clearInterval(spawnIntervalRef.current);
-                spawnIntervalRef.current = null;
-            }
-        };
-    }, [isSimulating, mode, isPreemptive, spawnTime]);
+    }, [initialProcesses, mode, isPreemptive]);
 
     // Función para verificar si hay un proceso más corto en la cola
     const checkForPreemption = () => {
@@ -152,6 +148,24 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive, tickT
         }
     }
 
+    const calculateMetrics = (process) => {
+        const turnaroundTime = process.finishTime - process.arrival;
+        const waitingTime = turnaroundTime - (process.burst * tickTime);
+        const responseTime = process.startTime - process.arrival;
+
+        return {
+            turnaroundTime: Math.max(0, Math.round(turnaroundTime / tickTime)),
+            waitingTime: Math.max(0, Math.round(waitingTime / tickTime)),
+            responseTime: Math.max(0, Math.round(responseTime / tickTime))
+        };
+    };
+
+    // Función para formatear tiempo en segundos
+    const formatTime = (timestamp) => {
+        if (!timestamp) return 'N/A';
+        return new Date(timestamp).toLocaleTimeString();
+    };
+
     return (
         <div className={`main-container ${mode}`}>
             <h2>Algoritmo {mode} {isPreemptive && mode === "SJN" ? "(Expropiativo)" : ""}</h2>
@@ -175,7 +189,7 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive, tickT
                 </div>
 
                 <div className={`cpu-area ${mode}`}>
-                    <EngineIconComponent isRunning={isSimulating} tickTime={tickTime}/>
+                    <EngineIconComponent isRunning={isSimulating} tickTime={tickTime} />
                     <div className="cpu-slot">
                         {running ? (
                             <div className="running-wrapper">
@@ -196,6 +210,94 @@ const SchedulerComponent = ({ mode, processes, isSimulating, isPreemptive, tickT
                 <div>En cola: {queue.length}</div>
                 <div>Terminados: {finished.length}</div>
             </div>
+
+            {finished.length > 0 && (
+                <div className="finished-processes">
+                    <h3>Procesos Terminados</h3>
+
+                    <div className={`processes-list ${mode}`}>
+                        {finished.map((process) => {
+                            const metrics = calculateMetrics(process);
+                            return (
+                                <div className="process-card" key={process.id}>
+                                    <div className="process-row">
+                                        <span className="label">Proceso: </span>
+                                        <span className="process-name">{process.name}</span>
+                                    </div>
+                                    <div className="process-row">
+                                        <span className="label">Tiempo CPU: </span>
+                                        <span>{process.burst}</span>
+                                    </div>
+                                    <div className="process-row">
+                                        <span className="label">Creación: </span>
+                                        <span>{formatTime(process.arrival)}</span>
+                                    </div>
+                                    <div className="process-row">
+                                        <span className="label">Inicio: </span>
+                                        <span>{formatTime(process.startTime)}</span>
+                                    </div>
+                                    <div className="process-row">
+                                        <span className="label">Fin: </span>
+                                        <span>{formatTime(process.finishTime)}</span>
+                                    </div>
+                                    <div className="process-row">
+                                        <span className="label">T. Respuesta: </span>
+                                        <span>{metrics.responseTime}</span>
+                                    </div>
+                                    <div className="process-row">
+                                        <span className="label">T. Espera: </span>
+                                        <span>{metrics.waitingTime}</span>
+                                    </div>
+                                    <div className="process-row">
+                                        <span className="label">T. Retorno: </span>
+                                        <span>{metrics.turnaroundTime}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Resumen de métricas */}
+                    <div className="metrics-summary">
+                        <h4>Métricas Promedio</h4>
+                        <div className="summary-stats">
+                            <div className="stat">
+                                <span className="stat-label">T. Respuesta Promedio:</span>
+                                <span className="stat-value">
+                                    {(
+                                        finished.reduce(
+                                            (sum, p) => sum + calculateMetrics(p).responseTime,
+                                            0
+                                        ) / finished.length
+                                    ).toFixed(2)}
+                                </span>
+                            </div>
+                            <div className="stat">
+                                <span className="stat-label">T. Espera Promedio:</span>
+                                <span className="stat-value">
+                                    {(
+                                        finished.reduce(
+                                            (sum, p) => sum + calculateMetrics(p).waitingTime,
+                                            0
+                                        ) / finished.length
+                                    ).toFixed(2)}
+                                </span>
+                            </div>
+                            <div className="stat">
+                                <span className="stat-label">T. Retorno Promedio:</span>
+                                <span className="stat-value">
+                                    {(
+                                        finished.reduce(
+                                            (sum, p) => sum + calculateMetrics(p).turnaroundTime,
+                                            0
+                                        ) / finished.length
+                                    ).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
